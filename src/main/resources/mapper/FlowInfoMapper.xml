@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.heidelberg.screen.mapper.FlowInfoMapper">
+
+    <resultMap type="com.heidelberg.screen.vo.FlowInfoVO" id="FlowInfoVOResult">
+        <result property="serviceName" column="service_name"/>
+        <result property="planQuantity" column="plan_quantity"/>
+        <result property="actualQuantity" column="actual_quantity"/>
+    </resultMap>
+
+    <resultMap type="com.heidelberg.screen.model.FlowInfo" id="FlowInfoResult">
+        <result property="id" column="id"/>
+    </resultMap>
+
+    <insert id="saveFlowInfo" parameterType="java.util.List">
+        INSERT INTO flow_info
+        (service_name, plan_quantity,actual_quantity,query_time,create_time,is_true)
+        VALUES
+        <foreach collection="flowInfos" item="flow" separator=",">
+            (#{flow.serviceName}, #{flow.planQuantity},
+            #{flow.actualQuantity},#{flow.queryTime},#{flow.createTime},#{flow.isTrue})
+        </foreach>
+    </insert>
+
+    <select id="findFlowInfoFalse" resultMap="FlowInfoVOResult">
+        select service_name,plan_quantity,actual_quantity from flow_info where is_true = '0'
+    </select>
+
+    <update id="updateFlowInfo" parameterType="com.heidelberg.screen.model.FlowInfo">
+        update flow_info
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="serviceName != null  and serviceName != ''">service_name = #{serviceName},</if>
+            <if test="planQuantity != null  and planQuantity != ''">plan_quantity = #{planQuantity},</if>
+            <if test="actualQuantity != null  and actualQuantity != ''">actual_quantity = #{actualQuantity},</if>
+            <if test="queryTime != null ">query_time = #{queryTime},</if>
+            <if test="createTime != null ">create_time = #{createTime},</if>
+            <if test="isTrue != null  and isTrue != ''">is_true = #{isTrue},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="delFlowInfoById" parameterType="java.util.List">
+        delete from flow_info where id
+        IN (
+        <foreach collection="flowInfos" item="flow" separator=",">
+            #{flow.id}
+        </foreach>
+        )
+    </delete>
+
+    <select id="findFlowInfoByTime" resultMap="FlowInfoResult">
+        select id from flow_info where query_time = #{time} and is_true = 1
+    </select>
+
+
+</mapper>

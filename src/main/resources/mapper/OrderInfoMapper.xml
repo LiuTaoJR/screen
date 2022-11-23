@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.heidelberg.screen.mapper.OrderInfoMapper">
+
+    <resultMap type="com.heidelberg.screen.model.OrderInfo" id="OrderInfoResult">
+        <result property="id" column="id"/>
+        <result property="orderNumIn" column="order_num_in"/>
+        <result property="orderNumOut" column="order_num_out"/>
+        <result property="workNumIn" column="work_num_in"/>
+        <result property="workNumOut" column="work_num_out"/>
+        <result property="queryTime" column="query_time"/>
+        <result property="createTime" column="create_time"/>
+        <result property="isTrue" column="is_true"/>
+    </resultMap>
+
+    <resultMap type="com.heidelberg.screen.vo.OrderInfoVO" id="OrderInfoVOResult">
+        <result property="orderNumIn" column="order_num_in"/>
+        <result property="orderNumOut" column="order_num_out"/>
+        <result property="workNumIn" column="work_num_in"/>
+        <result property="workNumOut" column="work_num_out"/>
+    </resultMap>
+
+    <resultMap type="com.heidelberg.screen.vo.OrderMonthVO" id="OrderMonthResult">
+        <result property="orderToldNum" column="orderToldNum"/>
+        <result property="month" column="month"/>
+    </resultMap>
+
+    <select id="findOrderInfoByTime" resultMap="OrderInfoVOResult" parameterType="string">
+        SELECT order_num_in, order_num_out, work_num_in, work_num_out
+        from order_info
+        where MONTH(query_time) = SUBSTRING(#{time},6,2) and is_true= '0'
+    </select>
+
+    <select id="findOrderMonthFalse" resultMap="OrderMonthResult" parameterType="string">
+        SELECT max((order_num_in+order_num_out)) as orderToldNum,concat(MONTH(query_time),'月') as month
+        from order_info
+        where DATE_SUB(date(#{time}), INTERVAL 12 MONTH) <![CDATA[ <= ]]> date(query_time)
+        and date(query_time) <![CDATA[ <= ]]> date(#{time}) and is_true='0'
+        GROUP BY month
+        ORDER BY query_time ASC
+    </select>
+
+    <select id="findOrderMonthTrue" resultMap="OrderMonthResult" parameterType="string">
+        SELECT max((order_num_in+order_num_out)) as orderToldNum,concat(MONTH(query_time),'月') as month
+        from order_info
+        where DATE_SUB(date(#{time}), INTERVAL 12 MONTH) <![CDATA[ <= ]]> date(query_time)
+        and date(query_time) <![CDATA[ <= ]]> date(#{time}) and is_true='1'
+        GROUP BY month
+        ORDER BY query_time ASC
+    </select>
+
+    <select id="findOrderIsOnly" resultMap="OrderInfoResult">
+        SELECT id,order_num_in, order_num_out, work_num_in, work_num_out,query_time,create_time,is_true
+        from order_info
+        where query_time = #{time} and is_true = 1
+    </select>
+
+    <update id="updateOrderInfo" parameterType="com.heidelberg.screen.model.OrderInfo">
+        update order_info
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="orderNumIn != null  and orderNumIn != ''">order_num_in = #{orderNumIn},</if>
+            <if test="orderNumOut != null  and orderNumOut != ''">order_num_out = #{orderNumOut},</if>
+            <if test="workNumIn != null  and workNumIn != ''">work_num_in = #{workNumIn},</if>
+            <if test="workNumOut != null  and workNumOut != ''">work_num_out = #{workNumOut},</if>
+            <if test="queryTime != null ">query_time = #{queryTime},</if>
+            <if test="createTime != null ">create_time = #{createTime},</if>
+            <if test="isTrue != null  and isTrue != ''">is_true = #{isTrue},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+
+</mapper>

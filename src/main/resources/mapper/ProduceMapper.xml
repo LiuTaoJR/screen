@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.heidelberg.screen.mapper.ProduceMapper">
+
+    <resultMap type="com.heidelberg.screen.vo.ProduceInfoVO" id="ProduceResult">
+        <result property="equipmentName" column="equipment_name"/>
+        <result property="overprintPaper" column="overprint_paper"/>
+        <result property="wastePaper" column="waste_paper"/>
+        <result property="endProduct" column="end_product"/>
+    </resultMap>
+
+    <select id="findProduceFalse" resultMap="ProduceResult">
+        select equipment_name,overprint_paper,waste_paper,end_product from produce_info where is_true = '0'
+    </select>
+
+
+</mapper>
