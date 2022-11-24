@@ -3,11 +3,9 @@ package com.heidelberg.screen.service.impl;
 import com.alibaba.fastjson.JSONObject;
 import com.heidelberg.screen.common.MapBeanUtil;
 import com.heidelberg.screen.config.HdbConstantConfig;
-import com.heidelberg.screen.mapper.ConfigDataMapper;
-import com.heidelberg.screen.mapper.FlowInfoMapper;
-import com.heidelberg.screen.mapper.OrderInfoMapper;
-import com.heidelberg.screen.mapper.ProduceMapper;
+import com.heidelberg.screen.mapper.*;
 import com.heidelberg.screen.model.ConfigData;
+import com.heidelberg.screen.model.DataRang;
 import com.heidelberg.screen.model.FlowInfo;
 import com.heidelberg.screen.model.OrderInfo;
 import com.heidelberg.screen.service.ScreenService;
@@ -41,6 +39,9 @@ public class ScreenServiceImpl implements ScreenService {
     private ConfigDataMapper configDataMapper;
 
     @Autowired
+    private DataRangMapper dataRangMapper;
+
+    @Autowired
     private RestTemplate restTemplate;
 
     @Autowired
@@ -48,6 +49,7 @@ public class ScreenServiceImpl implements ScreenService {
 
     String[] order = {"喷码", "印刷", "上光", "覆膜", "UV", "烫印", "起鼓", "贴面", "模切", "清废", "品检", "粘盒", "粘箱", "手工"};
 
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 
     @Override
     public OrderInfoVO findOrderInfo(String time, int flag) {
@@ -123,7 +125,6 @@ public class ScreenServiceImpl implements ScreenService {
                     Object obj = resultJson.get("data");
                     List<Map<String, Object>> list = (List) obj;
                     List<findFlowInfoVO> collect = list.stream().map(item -> MapBeanUtil.mapToObject(item, findFlowInfoVO.class)).collect(Collectors.toList());
-                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
                     Date queryTime = sdf.parse(time);
                     Date createTime = new Date();
                     for (findFlowInfoVO vo : collect) {
@@ -173,7 +174,52 @@ public class ScreenServiceImpl implements ScreenService {
             return resultList;
         } else {
             //假数据展示
-            List<FlowInfoVO> flowInfoFalse = flowInfoMapper.findFlowInfoFalse();
+            List<FlowInfoVO> flowInfoFalse = flowInfoMapper.findFlowInfoFalse(time);
+            //先查询假数据配置范围是否有变化
+            DataRang dataRang=dataRangMapper.selectByPrimaryKey(1);
+
+            //如果不存在，则进行保存
+            if((flowInfoFalse.size()<1) || (dataRang.getIsOpen()==1)){
+                try {
+                    List<FlowInfo> flowInfos=new ArrayList<>();
+                    //根据当前日期查询当月的订单总数
+                    int orderNum=orderInfoMapper.getOrderNum(time);
+                    int printNum=orderNum/30;//印刷数
+                    double sgNum= printNum * 0.33;//上光
+                    double tmNum=printNum*0.2;//贴面
+                    int mqNUm=printNum/2;//模切
+                    double zxNum=tmNum;//粘箱
+                    int zhNUm=printNum/3;//粘盒
+                    int[] listNum={printNum,(int)sgNum,(int)tmNum,mqNUm,(int)zxNum,zhNUm};
+
+                    String[] listName={"印刷","上光","贴面","模切","粘箱","粘盒"};
+                    for(int i=0;i<listNum.length;i++){
+                        FlowInfo info=new FlowInfo();
+                        info.setServiceName(listName[i]);
+                        info.setPlanQuantity(listNum[i]);
+                        info.setActualQuantity(0);
+                        info.setQueryTime(sdf.parse(time));
+                        info.setCreateTime(new Date());
+                        info.setIsTrue(0);
+                        flowInfos.add(info);
+                    }
+                    //最后更新dataRang的isOpen标志
+                    dataRang.setIsOpen(2);
+                    dataRangMapper.updateByPrimaryKey(dataRang);
+
+                    //先删除flowInfo假数据
+                    flowInfoMapper.delFlowInfoFalseByTime(time);
+                    //批量保存flowInfo假数据
+                    flowInfoMapper.insertFlowInfoList(flowInfos);
+                    //第二遍查询
+                    flowInfoFalse = flowInfoMapper.findFlowInfoFalse(time);
+                }catch (Exception e){
+                    log.info("flow_info假数据保存失败");
+                    e.printStackTrace();
+                }
+            }
+
+            //排序
             List<FlowInfoVO> resultFalse = new ArrayList<>();
             for (int i = 0; i < order.length; i++) {
                 for (FlowInfoVO vo : flowInfoFalse) {
@@ -189,13 +235,66 @@ public class ScreenServiceImpl implements ScreenService {
     @Override
     public List<OrderMonthVO> findOrderMonth(String time, int flag) {
         List<OrderMonthVO> list;
+        //计算当前是几号
+        int currentDay = Integer.valueOf(time.substring(8, 10));
+        //统计当前月份
+        int currentMonth = Integer.valueOf(time.substring(5, 7));
         if (this.findConfigData(flag)) {
+            //真数据
             list = orderInfoMapper.findOrderMonthTrue(time);
         } else {
+            //先查询假数据配置范围是否有变化
+            DataRang dataRang=dataRangMapper.selectByPrimaryKey(1);
+            if(dataRang.getIsOpen() == 0){
+                List<OrderInfo> orderInfoList=new ArrayList<>();
+                //订单数据下限
+                int down=dataRang.getDataDown();
+                //订单数据上限
+                int top=dataRang.getDataTop();
+                //查询12个月假数据
+                List<OrderInfo> orderInfos=orderInfoMapper.selectAllFalse();
+                for (OrderInfo info:orderInfos){
+                    OrderInfo orderInfo=new OrderInfo();
+                    //根据数据范围随机生成每月订单总量
+                    //订单
+                    int orderNum=(int) (Math.random()*down) + (top-down);
+                    int orderNumIn=(int) Math.round(orderNum * 0.8);
+                    int orderNumOut=(int) Math.round(orderNum * 0.2);
+                    //工单
+                    int workNum=Math.round(orderNum/10000);
+                    int workNumIn=(int) Math.round(workNum * 0.8);
+                    int workNumOut=(int) Math.round(workNum * 0.2);
+                    orderInfo.setId(info.getId());
+                    orderInfo.setOrderNumIn(orderNumIn);
+                    orderInfo.setOrderNumOut(orderNumOut);
+                    orderInfo.setWorkNumIn(workNumIn);
+                    orderInfo.setWorkNumOut(workNumOut);
+                    orderInfoList.add(orderInfo);
+                }
+                //批量更新orderInfo数据
+                orderInfoMapper.updateOrderInfoFalseList(orderInfoList);
+                //最后更新dataRang的isOpen标志
+                dataRang.setIsOpen(1);
+                dataRangMapper.updateByPrimaryKey(dataRang);
+            }
+            //查询假数据
             list = orderInfoMapper.findOrderMonthFalse(time);
+            //假数据排序
+            List<OrderMonthVO> orderList=new ArrayList<>();
+            int size=list.size();
+            if(currentMonth<size){
+                for(int i=currentMonth;i<size;i++){
+                    orderList.add(list.get(i));
+                }
+                for(int j=0;j<currentMonth;j++){
+                    orderList.add(list.get(j));
+                }
+                list=orderList;
+            }
+
         }
-        int strMonth = Integer.valueOf(time.substring(8, 10));
-        if (strMonth < 20 && list.size() > 0) {
+
+        if (currentDay < 20 && list.size() > 0) {
             list = list.subList(0, list.size() - 1);
         }
         return list;

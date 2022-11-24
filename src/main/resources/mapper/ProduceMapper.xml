@@ -13,5 +13,22 @@
         select equipment_name,overprint_paper,waste_paper,end_product from produce_info where is_true = '0'
     </select>
 
+    <select id="selectProduceFalse" resultType="com.heidelberg.screen.model.ProduceInfo">
+        select * from produce_info where is_true = '0'
+    </select>
+
+    <update id="updateProduceFalseList" parameterType="java.util.List">
+        <foreach collection="infos" item="info" separator=";">
+            update produce_info
+            set
+            overprint_paper = #{info.overprintPaper},
+            waste_paper = #{info.wastePaper},
+            end_product = #{info.endProduct}
+            where
+            id = #{info.id}
+        </foreach>
+    </update>
+
+
 
 </mapper>

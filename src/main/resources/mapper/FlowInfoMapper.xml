@@ -10,6 +10,9 @@
 
     <resultMap type="com.heidelberg.screen.model.FlowInfo" id="FlowInfoResult">
         <result property="id" column="id"/>
+        <result property="serviceName" column="service_name"/>
+        <result property="planQuantity" column="plan_quantity"/>
+        <result property="actualQuantity" column="actual_quantity"/>
     </resultMap>
 
     <insert id="saveFlowInfo" parameterType="java.util.List">
@@ -23,7 +26,8 @@
     </insert>
 
     <select id="findFlowInfoFalse" resultMap="FlowInfoVOResult">
-        select service_name,plan_quantity,actual_quantity from flow_info where is_true = '0'
+        select service_name,plan_quantity,actual_quantity from flow_info
+        where is_true = '0' and query_time= #{time}
     </select>
 
     <update id="updateFlowInfo" parameterType="com.heidelberg.screen.model.FlowInfo">
@@ -51,6 +55,36 @@
     <select id="findFlowInfoByTime" resultMap="FlowInfoResult">
         select id from flow_info where query_time = #{time} and is_true = 1
     </select>
+
+    <insert id="insertFlowInfoList" parameterType="java.util.List">
+        insert into flow_info (service_name,plan_quantity,actual_quantity,query_time,create_time,is_true)
+        values
+        <foreach collection="flowInfos" item="flow" separator=",">
+            ( #{flow.serviceName},#{flow.planQuantity},#{flow.actualQuantity},#{flow.queryTime},
+            #{flow.createTime},#{flow.isTrue})
+        </foreach>
+
+    </insert>
+
+
+    <select id="findFlowInfoFalseEntity" resultMap="FlowInfoResult">
+        select id,service_name,plan_quantity,actual_quantity from flow_info
+        where is_true = '0' and query_time= #{time}
+    </select>
+
+    <update id="updateFlowInfoList" parameterType="java.util.List">
+        <foreach collection="flowInfos" item="flow" separator=";">
+            update flow_info
+            set
+               actual_quantity = #{flow.actualQuantity}
+            where
+               id = #{flow.id}
+        </foreach>
+    </update>
+
+    <delete id="delFlowInfoFalseByTime" >
+        delete from flow_info where query_time = #{time}
+    </delete>
 
 
 </mapper>

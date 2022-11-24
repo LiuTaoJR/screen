@@ -34,8 +34,7 @@
     <select id="findOrderMonthFalse" resultMap="OrderMonthResult" parameterType="string">
         SELECT max((order_num_in+order_num_out)) as orderToldNum,concat(MONTH(query_time),'月') as month
         from order_info
-        where DATE_SUB(date(#{time}), INTERVAL 12 MONTH) <![CDATA[ <= ]]> date(query_time)
-        and date(query_time) <![CDATA[ <= ]]> date(#{time}) and is_true='0'
+        where is_true='0'
         GROUP BY month
         ORDER BY query_time ASC
     </select>
@@ -67,6 +66,32 @@
             <if test="isTrue != null  and isTrue != ''">is_true = #{isTrue},</if>
         </trim>
         where id = #{id}
+    </update>
+
+    <select id="getOrderNum" resultType="int">
+        SELECT (order_num_in + order_num_out) as total from order_info
+        where MONTH(query_time) = MONTH(#{time})
+        and is_true='0'
+        LIMIT 0,1
+    </select>
+
+    <select id="selectAllFalse" resultMap="OrderInfoResult" >
+       select id,order_num_in,order_num_out,work_num_in,work_num_out,query_time,create_time,is_true
+       from order_info
+       where is_true='0'
+    </select>
+
+    <update id="updateOrderInfoFalseList" parameterType="java.util.List">
+        <foreach collection="infos" item="info" separator=";">
+            update order_info
+            set
+                order_num_in = #{info.orderNumIn},
+                order_num_out = #{info.orderNumOut},
+                work_num_in = #{info.workNumIn},
+                work_num_out = #{info.workNumOut}
+            where
+                id = #{info.id}
+        </foreach>
     </update>
 
 
