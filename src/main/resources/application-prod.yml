@@ -4,8 +4,8 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/screen?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8&allowMultiQueries=true
-    username: screen
-    password: Screen@2022
+    username: root
+    password: root
     type: com.alibaba.druid.pool.DruidDataSource
     initialSize: 3
     # 最小连接池个数——》已经不再使用，配置了也没效果

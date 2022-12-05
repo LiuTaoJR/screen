@@ -257,11 +257,13 @@ public class ScreenServiceImpl implements ScreenService {
                     OrderInfo orderInfo=new OrderInfo();
                     //根据数据范围随机生成每月订单总量
                     //订单
-                    int orderNum=(int) (Math.random()*down) + (top-down);
+                    int orderNum=(int) (Math.random()*(top-down)) + down;
                     int orderNumIn=(int) Math.round(orderNum * 0.8);
                     int orderNumOut=(int) Math.round(orderNum * 0.2);
                     //工单
-                    int workNum=Math.round(orderNum/10000);
+                    Random random=new Random();
+                    int baseNum=random.nextInt(20000)+30000;
+                    int workNum=Math.round(orderNum/baseNum);
                     int workNumIn=(int) Math.round(workNum * 0.8);
                     int workNumOut=(int) Math.round(workNum * 0.2);
                     orderInfo.setId(info.getId());
